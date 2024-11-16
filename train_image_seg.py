@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import os
 import traceback
 import sys
@@ -46,6 +48,7 @@ def train(args):
     epochs = args.epochs
     out_path = args.out_path
     encoder_name = args.encoder
+    model_name = args.model
 
     # train_dir = os.path.join(dataset_path, 'train')
     train_dir = os.path.join(dataset_path, '')
@@ -74,42 +77,57 @@ def train(args):
 
     val_loader = data.DataLoader(
         val_dataset,
-        batch_size=1,
+        batch_size=int(batch_size*2),
         shuffle=False,
         num_workers=4
     )
 
-    linknet_model = smp.Linknet(
-        encoder_name=encoder_name,
-        encoder_depth=5,
-        encoder_weights='imagenet',
-        in_channels=3,
-        classes=1,
-        activation='sigmoid'
-    )
+    model = None
 
-    # Train LinkNet Model with given backbone
+    if model_name.lower() == 'deeplabv3+':
+        print("Loading DeepLabV3+ from SMP...")
+        model = smp.DeepLabV3Plus(
+            encoder_name=encoder_name,
+            encoder_weights='imagenet',
+            in_channels=3,
+            classes=1,
+            activation='sigmoid'
+        )
+    else:
+        print("Loading Linknet from SMP...")
+        model = smp.Linknet(
+            encoder_name=encoder_name,
+            encoder_depth=5,
+            encoder_weights='imagenet',
+            in_channels=3,
+            classes=1,
+            activation='sigmoid'
+        )
+
+    # Train Model with given backbone
 
     try:
         train_model(
-            linknet_model,
+            model,
             init_lr=init_lr,
             num_epochs=epochs,
             out_path=out_path,
             train_loader=train_loader,
             val_loader=val_loader,
-            encoder_name=encoder_name
+            encoder_name=encoder_name,
+            model_name=model_name,
+            batch_size=batch_size
         )
     except:
         print(traceback.format_exc())
     try:
-        linknet_model = None
+        model = None
         gc.collect()
     except:
         print(traceback.format_exc())
 
 
-def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, encoder_name):
+def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, encoder_name, model_name, batch_size):
     """
     Trains a single image given model and further arguments
     :param model: Model from SMP library
@@ -118,6 +136,8 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
     :param out_path: Folder to output checkpoints and model
     :param train_loader: Dataloader for train dataset
     :param val_loader: Dataloader for validation dataset
+    :param model_name: Name of the model architecture
+    :param batch_size: Batch size value
     :return:
     """
     plots_dir = os.path.join(out_path, 'graphs')
@@ -140,6 +160,8 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
         dict(params=model.parameters(), lr=init_lr),
     ])
 
+    print(f"Using device: {device}")
+
     # Create training epoch
     train_epoch = smp.utils.train.TrainEpoch(
         model,
@@ -160,6 +182,8 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
     )
 
     max_score = 0
+    best_model = None
+
     train_iou_score_ls = []
     train_dice_loss_ls = []
 
@@ -187,14 +211,24 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
         score = float(valid_logs['iou_score'])
 
         checkpoint_savepth = os.path.join(checkpoints_dir, 'epoch_' + str(epoch).zfill(3) + '_score' + str(score) + '.pth')
-        torch.save(checkpoint, checkpoint_savepth)
+        # save epochs every "freq_save"
+        freq_save = 10 # save every 10 epochs
+        if epoch % freq_save == 0:
+            torch.save(checkpoint, checkpoint_savepth)
 
         # Check score on valid dataset
         if score > max_score:
             max_score = score
-            model_savepth = os.path.join(models_dir, 'linknet_' + encoder_name + '_epoch_' + str(epoch).zfill(3) + '_score' + str(score) + '.pth')
+            new_file_name = model_name + '_' + encoder_name + '_batchsize_' + str(batch_size) + '_epoch_' + str(epoch).zfill(3) + '_score_' + str(score) + '.pth'
+            model_savepth = os.path.join(models_dir, new_file_name)
             torch.save(model, model_savepth)
             print('New best model detected.')
+            # Remove old files if they exist:
+            for _f in os.listdir(models_dir):
+                if _f != new_file_name and _f == best_model:
+                    os.remove(os.path.join(models_dir, _f))
+                    print(f'Old best model "{_f}" was deleted')
+            best_model = new_file_name
 
         # Adjust learning rate halfway through training.
         if epoch == int(num_epochs / 2):
@@ -268,6 +302,11 @@ if __name__ == '__main__':
                         type=str,
                         metavar='PATH',
                         help='(OPTIONAL) Path to output folder, defaults to project root/output')
+    # Optional: Which model architecture to use
+    parser.add_argument('--model',
+                        default='linknet',
+                        type=str,
+                        help='(OPTIONAL) Model architecture to use, either linknet or deeplabv3+')
     _args = parser.parse_args()
 
     print("== System Details ==")
