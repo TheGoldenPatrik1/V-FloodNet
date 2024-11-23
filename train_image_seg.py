@@ -49,6 +49,7 @@ def train(args):
     out_path = args.out_path
     encoder_name = args.encoder
     model_name = args.model
+    encoder_weights = args.encoder_weights
 
     # train_dir = os.path.join(dataset_path, 'train')
     train_dir = os.path.join(dataset_path, '')
@@ -84,17 +85,18 @@ def train(args):
 
     model = None
 
-    if model_name.lower() == 'deeplabv3+':
-        print("Loading DeepLabV3+ from SMP...")
+    model_name = model_name.lower()
+    if model_name == 'deeplabv3+':
+        print(f"Loading DeepLabV3+ from SMP with weights from '{encoder_weights}'...")
         model = smp.DeepLabV3Plus(
             encoder_name=encoder_name,
-            encoder_weights='imagenet',
+            encoder_weights=encoder_weights,
             in_channels=3,
             classes=1,
             activation='sigmoid'
         )
-    else:
-        print("Loading Linknet from SMP...")
+    elif model_name == 'linknet':
+        print(f"Loading Linknet from SMP with weights from '{encoder_weights}'...")
         model = smp.Linknet(
             encoder_name=encoder_name,
             encoder_depth=5,
@@ -103,6 +105,9 @@ def train(args):
             classes=1,
             activation='sigmoid'
         )
+    else:
+        print("Unrecognized or unspecified model name, exiting...")
+        return
 
     # Train Model with given backbone
 
@@ -270,11 +275,16 @@ if __name__ == '__main__':
                         type=str,
                         metavar='PATH',
                         help='Path to the dataset. Expects format shown in the header comments.')
-    # Required: Model name. Can be efficient
+    # Required: Encoder name.
     parser.add_argument('--encoder',
                         type=str,
                         metavar='PATH',
                         help='Encoder name, as used by segmentation_model.pytorch library')
+    # Required: Which model architecture to use.
+    parser.add_argument('--model',
+                        default="",
+                        type=str,
+                        help='Model architecture to use, one of DeepLabV3+ or Linknet')
     # Optional: Image input size that the model should be designed to accept. In LinkNet, image will be
     #           subsampled 5 times, and thus must be a factor of 32.
     parser.add_argument('--input-shape',
@@ -291,7 +301,7 @@ if __name__ == '__main__':
                         default=1e-4,
                         type=float,
                         help='(OPTIONAL)  Batch size for mini-batch gradient descent.')
-    # Optional: Number of epochs for training
+    # Optional: Number of epochs for training.
     parser.add_argument('--epochs',
                         default=300,
                         type=int,
@@ -302,11 +312,11 @@ if __name__ == '__main__':
                         type=str,
                         metavar='PATH',
                         help='(OPTIONAL) Path to output folder, defaults to project root/output')
-    # Optional: Which model architecture to use
-    parser.add_argument('--model',
-                        default='linknet',
+    # Optional: Which pre-trained weights to load for the encoder.
+    parser.add_argument('--encoder-weights',
+                        default='imagenet',
                         type=str,
-                        help='(OPTIONAL) Model architecture to use, either linknet or deeplabv3+')
+                        help='(OPTIONAL) Pre-trained weights to load for the encoder')
     _args = parser.parse_args()
 
     print("== System Details ==")
