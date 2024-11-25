@@ -2,32 +2,21 @@ import matplotlib
 matplotlib.use('Agg')
 import os
 import traceback
-import sys
 import argparse
-import time
 import gc
-import warnings
 import torch
 import segmentation_models_pytorch as smp
 from segmentation_models_pytorch.utils.metrics import IoU
 from segmentation_models_pytorch.utils.losses import DiceLoss
 import matplotlib.pyplot as plt
-from pathlib import Path
 from torch.utils import data
 from image_module.dataset_water import WaterDataset_RGB
 
 ROOT_DIR = './'
 
-# time_str = time.strftime("%Y-%m-%d %H-%M-%S")
 DEFAULT_CHKPT_DIR = os.path.join(ROOT_DIR, 'output', 'img_seg_checkpoint')
 
-# # Device
-# DEVICE = torch.device('cpu')
-# if torch.cuda.is_available():
-#     DEVICE = torch.device('cuda')
-
 # Input size must be a multiple of 32 as the image will be subsampled 5 times
-
 
 def train(args):
     """
@@ -50,6 +39,9 @@ def train(args):
     encoder_name = args.encoder
     model_name = args.model
     encoder_weights = args.encoder_weights
+    verbose = args.verbose
+
+    verbose = False if verbose.lower() == 'false' else True
 
     # train_dir = os.path.join(dataset_path, 'train')
     train_dir = os.path.join(dataset_path, '')
@@ -86,6 +78,7 @@ def train(args):
     model = None
 
     model_name = model_name.lower()
+    print()
     if model_name == 'deeplabv3+':
         print(f"Loading DeepLabV3+ from SMP with weights from '{encoder_weights}'...")
         model = smp.DeepLabV3Plus(
@@ -121,7 +114,8 @@ def train(args):
             val_loader=val_loader,
             encoder_name=encoder_name,
             model_name=model_name,
-            batch_size=batch_size
+            batch_size=batch_size,
+            verbose=verbose
         )
     except:
         print(traceback.format_exc())
@@ -132,7 +126,7 @@ def train(args):
         print(traceback.format_exc())
 
 
-def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, encoder_name, model_name, batch_size):
+def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, encoder_name, model_name, batch_size, verbose):
     """
     Trains a single image given model and further arguments
     :param model: Model from SMP library
@@ -143,6 +137,7 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
     :param val_loader: Dataloader for validation dataset
     :param model_name: Name of the model architecture
     :param batch_size: Batch size value
+    :param verbose: Whether the logs should be verbose
     :return:
     """
     plots_dir = os.path.join(out_path, 'graphs')
@@ -174,7 +169,7 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
         metrics=metrics,
         optimizer=optimizer,
         device=device,
-        verbose=True
+        verbose=verbose
     )
 
     # Create validation epoch
@@ -183,7 +178,7 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
         loss=loss,
         metrics=metrics,
         device=device,
-        verbose=True
+        verbose=verbose
     )
 
     max_score = 0
@@ -227,7 +222,7 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
             new_file_name = model_name + '_' + encoder_name + '_batchsize_' + str(batch_size) + '_epoch_' + str(epoch).zfill(3) + '_score_' + str(score) + '.pth'
             model_savepth = os.path.join(models_dir, new_file_name)
             torch.save(model, model_savepth)
-            print('New best model detected.')
+            print(f'New best model "{new_file_name}" detected')
             # Remove old files if they exist:
             for _f in os.listdir(models_dir):
                 if _f != new_file_name and _f == best_model:
@@ -238,7 +233,7 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
         # Adjust learning rate halfway through training.
         if epoch == int(num_epochs / 2):
             optimizer.param_groups[0]['lr'] = 1e-5
-            print('Decrease decoder learning rate to 1e-5!')
+            print('Decreased decoder learning rate to 1e-5!')
 
 
         train_iou_score_ls.append(train_logs['iou_score'])
@@ -317,6 +312,11 @@ if __name__ == '__main__':
                         default='imagenet',
                         type=str,
                         help='(OPTIONAL) Pre-trained weights to load for the encoder')
+    # Optional: Whether the logs should be verbose or not.
+    parser.add_argument('--verbose',
+                        default='true',
+                        type=str,
+                        help='(OPTIONAL) Whether the logs should be verbose or not')
     _args = parser.parse_args()
 
     print("== System Details ==")
