@@ -17,7 +17,7 @@ def load_image_in_PIL(path, mode='RGB'):
 
 class WaterDataset(data.Dataset):
 
-    def __init__(self, mode, dataset_path, input_size=None, test_case=None, eval_size=None):
+    def __init__(self, mode, dataset_path, type, input_size=None, test_case=None, eval_size=None):
 
         super(WaterDataset, self).__init__()
 
@@ -31,7 +31,27 @@ class WaterDataset(data.Dataset):
         self.eval_size = eval_size
 
         if mode == 'train_offline':
-            with open(os.path.join(dataset_path, 'train_imgs.txt')) as f:
+            file_path = os.path.join(dataset_path, 'train_imgs.txt')
+            if not os.path.exists(file_path):
+                label_list = glob(os.path.join(dataset_path, type, 'mask', '*.png'))
+                label_list.sort(key=lambda x: (len(x), x))
+                self.label_list += label_list
+
+                name_list = [os.path.basename(x)[:-4] for x in label_list]
+
+                img_list = glob(os.path.join(dataset_path, type, 'image', '*.jpg'))
+                img_list.sort(key=lambda x: (len(x), x))
+                img_list_valid = []
+                for img_path in img_list:
+                    if os.path.basename(img_path)[:-4] in name_list:
+                        img_list_valid.append(img_path)
+
+                self.img_list += img_list_valid
+
+                print('Add', type, len(img_list_valid), 'files.')
+                return
+            
+            with open(file_path) as f:
                 water_subdirs = f.readlines()
             water_subdirs = [x.strip() for x in water_subdirs]
 
@@ -112,8 +132,8 @@ class WaterDataset(data.Dataset):
 
 
 class WaterDataset_RGB(WaterDataset):
-    def __init__(self, mode, dataset_path, input_size=None, test_case=None, eval_size=None):
-        super(WaterDataset_RGB, self).__init__(mode, dataset_path, input_size, test_case, eval_size)
+    def __init__(self, mode, dataset_path, type, input_size=None, test_case=None, eval_size=None):
+        super(WaterDataset_RGB, self).__init__(mode, dataset_path, type, input_size, test_case, eval_size)
 
     def __getitem__(self, index):
         if self.mode == 'train_offline' or self.mode == 'val_offline' or self.mode == 'test_offline':

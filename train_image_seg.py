@@ -16,8 +16,6 @@ ROOT_DIR = './'
 
 DEFAULT_CHKPT_DIR = os.path.join(ROOT_DIR, 'output', 'img_seg_checkpoint')
 
-# Input size must be a multiple of 32 as the image will be subsampled 5 times
-
 def train(args):
     """
     Executes train script given arguments
@@ -43,22 +41,19 @@ def train(args):
 
     verbose = False if verbose.lower() == 'false' else True
 
-    # train_dir = os.path.join(dataset_path, 'train')
-    train_dir = os.path.join(dataset_path, '')
-    # val_dir = os.path.join(dataset_path, 'val')
-    val_dir = os.path.join(dataset_path, '')
-
     # Input size must be a multiple of 32 as the image will be subsampled 5 times
     train_dataset = WaterDataset_RGB(
         mode='train_offline',
-        dataset_path=train_dir,
-        input_size=(416, 416)
+        dataset_path=dataset_path,
+        input_size=(416, 416),
+        type='train'
     )
 
     val_dataset = WaterDataset_RGB(
         mode='train_offline',
-        dataset_path=val_dir,
-        input_size=(input_shape, input_shape)
+        dataset_path=dataset_path,
+        input_size=(input_shape, input_shape),
+        type='val'
     )
 
     train_loader = data.DataLoader(
@@ -70,7 +65,7 @@ def train(args):
 
     val_loader = data.DataLoader(
         val_dataset,
-        batch_size=int(batch_size*2),
+        batch_size=batch_size,
         shuffle=False,
         num_workers=4
     )
@@ -103,7 +98,6 @@ def train(args):
         return
 
     # Train Model with given backbone
-
     try:
         train_model(
             model,
