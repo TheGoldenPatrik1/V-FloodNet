@@ -8,16 +8,14 @@ from torch.utils import data
 from . import transforms as my_tf
 from myutils import load_image_in_PIL as load_img
 
-
 def load_image_in_PIL(path, mode='RGB'):
     img = Image.open(path)
     img.load()  # Very important for loading large image
     return img.convert(mode)
 
-
 class WaterDataset(data.Dataset):
 
-    def __init__(self, mode, dataset_path, type, input_size=None, test_case=None, eval_size=None):
+    def __init__(self, mode, dataset_path, input_size=None, test_case=None, eval_size=None):
 
         super(WaterDataset, self).__init__()
 
@@ -30,9 +28,10 @@ class WaterDataset(data.Dataset):
         self.online_augmentation_per_epoch = 640
         self.eval_size = eval_size
 
-        if mode == 'train_offline':
+        if mode == 'train_offline' or mode == 'val_offline':
             file_path = os.path.join(dataset_path, 'train_imgs.txt')
             if not os.path.exists(file_path):
+                type = mode.split('_')[0]
                 label_list = glob(os.path.join(dataset_path, type, 'mask', '*.png'))
                 label_list.sort(key=lambda x: (len(x), x))
                 self.label_list += label_list
@@ -74,8 +73,6 @@ class WaterDataset(data.Dataset):
                 self.img_list += img_list_valid
 
                 print('Add', sub_folder, len(img_list_valid), 'files.')
-
-
 
         elif mode == 'eval':
             if test_case is None:
@@ -132,13 +129,13 @@ class WaterDataset(data.Dataset):
 
 
 class WaterDataset_RGB(WaterDataset):
-    def __init__(self, mode, dataset_path, type, input_size=None, test_case=None, eval_size=None):
-        super(WaterDataset_RGB, self).__init__(mode, dataset_path, type, input_size, test_case, eval_size)
+    def __init__(self, mode, dataset_path, input_size=None, test_case=None, eval_size=None):
+        super(WaterDataset_RGB, self).__init__(mode, dataset_path, input_size, test_case, eval_size)
 
     def __getitem__(self, index):
         if self.mode == 'train_offline' or self.mode == 'val_offline' or self.mode == 'test_offline':
             img = load_img(self.img_list[index], 'RGB')
-            label = load_img(self.label_list[index], 'P')
+            label = load_img(self.label_list[index], 'L')
             return self.apply_transforms(img, label)
         elif self.mode == 'train_online':
             return self.apply_transforms(self.first_frame, self.first_frame_label)
@@ -167,11 +164,7 @@ class WaterDataset_RGB(WaterDataset):
         img_orig = TF.to_tensor(img)
         img_norm = my_tf.imagenet_normalization(img_orig)
 
-        if self.mode == 'train_offline' or self.mode == 'train_online':
-            # label = TF.to_tensor(label)
-            label = np.expand_dims(np.array(label, np.float32), axis=0)
-            return img_norm, label
-        elif self.mode == 'val_offline':
+        if self.mode == 'train_offline' or self.mode == 'train_online' or self.mode == 'val_offline':
             label = np.expand_dims(np.array(label, np.float32), axis=0)
             return img_norm, label
         elif self.mode == 'test_offline':

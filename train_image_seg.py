@@ -45,29 +45,29 @@ def train(args):
     train_dataset = WaterDataset_RGB(
         mode='train_offline',
         dataset_path=dataset_path,
-        input_size=(416, 416),
-        type='train'
+        input_size=(416, 416)
     )
 
     val_dataset = WaterDataset_RGB(
-        mode='train_offline',
+        mode='val_offline',
         dataset_path=dataset_path,
-        input_size=(input_shape, input_shape),
-        type='val'
+        input_size=(input_shape, input_shape)
     )
 
     train_loader = data.DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=4
+        num_workers=4,
+        drop_last=True
     )
 
     val_loader = data.DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=4
+        num_workers=4,
+        drop_last=True
     )
 
     model = None
