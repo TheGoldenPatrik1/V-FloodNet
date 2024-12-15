@@ -239,6 +239,7 @@ To train the image segmentation module, please refer to the `train_image_seg.py`
 python train_image_seg.py \
   --dataset-path=/path/to/Datasets/WaterDataset/train_images/ \
   --encoder=efficientnet-b4
+  --model=deeplabv3+
 ```
 
 To train the video segmentation module, please refer to the `train_video_seg.py`. We provide an initial training point in [Google Drive](https://drive.google.com/file/d/1l9TXNV4YQMAxL8RqfL14-qofn_s641Dx/view?usp=sharing), where the network weights are pretrained on large general videos.

@@ -31,15 +31,8 @@ import torchvision.transforms as tf
 
 import myutils
 
-# ROOT_DIR = str(Path(__file__).resolve().parents[0])
 ROOT_DIR = './'
-# time_str = timestr = time.strftime("%Y-%m-%d %H-%M-%S")
-# DEFAULT_OUT = os.path.join(ROOT_DIR, 'output', 'test_waterseg', time_str)
 DEFAULT_OUT = os.path.join(ROOT_DIR, 'output', 'segs')
-# DEFAULT_PALETTE = os.path.join(ROOT_DIR, "assets", "mask_palette.png")
-# sys.path.append(ROOT_DIR)
-# print("Added", ROOT_DIR, "to PATH.")
-
 
 def norm_imagenet(img_pil, dims):
     """
@@ -62,7 +55,6 @@ def norm_imagenet(img_pil, dims):
 
     img_norm = transform_norm(img_pil)
     return img_norm
-
 
 def predict_one(path, model, mask_outdir, overlay_outdir, device):
     """
@@ -90,7 +82,6 @@ def predict_one(path, model, mask_outdir, overlay_outdir, device):
     # overlay_np = np.array(img_pil) * 1 + np.array(prediction.convert('RGB')) * 0.8
     # overlay_np = overlay_np.clip(0, 255)
     # Image.fromarray(overlay_np.astype(np.uint8)).save(over_savepth)
-
 
 def predict_pil(model, img_pil, model_dims, device):
     """
@@ -123,7 +114,6 @@ def predict_pil(model, img_pil, model_dims, device):
     prediction.putpalette(myutils.color_palette)
     return prediction
 
-
 def test_waterseg(model_path, test_path, test_name, out_path, device):
     """
     Tests either a single or an entire folder of images
@@ -149,7 +139,6 @@ def test_waterseg(model_path, test_path, test_name, out_path, device):
             predict_one(path, model, mask_out, overlay_out, device)
     else:
         print("Error: Unknown path type:", test_path)
-
 
 if __name__ == '__main__':
     # Hyper parameters

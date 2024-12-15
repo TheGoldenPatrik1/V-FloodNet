@@ -38,6 +38,7 @@ def train(args):
     model_name = args.model
     encoder_weights = args.encoder_weights
     verbose = args.verbose
+    patience = args.patience
 
     verbose = False if verbose.lower() == 'false' else True
 
@@ -109,7 +110,8 @@ def train(args):
             encoder_name=encoder_name,
             model_name=model_name,
             batch_size=batch_size,
-            verbose=verbose
+            verbose=verbose,
+            patience=patience
         )
     except:
         print(traceback.format_exc())
@@ -119,8 +121,7 @@ def train(args):
     except:
         print(traceback.format_exc())
 
-
-def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, encoder_name, model_name, batch_size, verbose):
+def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, encoder_name, model_name, batch_size, verbose, patience):
     """
     Trains a single image given model and further arguments
     :param model: Model from SMP library
@@ -132,6 +133,7 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
     :param model_name: Name of the model architecture
     :param batch_size: Batch size value
     :param verbose: Whether the logs should be verbose
+    :param patience: How many epochs to wait for improvement
     :return:
     """
     plots_dir = os.path.join(out_path, 'graphs')
@@ -177,6 +179,7 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
 
     max_score = 0
     best_model = None
+    patience_counter = 0
 
     train_iou_score_ls = []
     train_dice_loss_ls = []
@@ -204,9 +207,9 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
         # Get IOU score
         score = float(valid_logs['iou_score'])
 
+        # Save checkpoint every 10 epochs
         checkpoint_savepth = os.path.join(checkpoints_dir, 'epoch_' + str(epoch).zfill(3) + '_score' + str(score) + '.pth')
-        # save epochs every "freq_save"
-        freq_save = 10 # save every 10 epochs
+        freq_save = 10
         if epoch % freq_save == 0:
             torch.save(checkpoint, checkpoint_savepth)
 
@@ -223,12 +226,14 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
                     os.remove(os.path.join(models_dir, _f))
                     print(f'Old best model "{_f}" was deleted')
             best_model = new_file_name
+            patience_counter = 0
+        else:
+            patience_counter += 1
 
         # Adjust learning rate halfway through training.
         if epoch == int(num_epochs / 2):
             optimizer.param_groups[0]['lr'] = 1e-5
             print('Decreased decoder learning rate to 1e-5!')
-
 
         train_iou_score_ls.append(train_logs['iou_score'])
         train_dice_loss_ls.append(train_logs['dice_loss'])
@@ -252,9 +257,12 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
         plt.savefig(plot_val_filepth)
         plt.close()
 
+        if patience_counter == patience:
+            print(f'No improvement after {patience} epochs; exiting early')
+            break
 
 """
-    python train_segmodel.py --dataset_path 
+    python train_segmodel.py --dataset_path --encoder --model
 """
 if __name__ == '__main__':
     # Hyper parameters
@@ -284,12 +292,12 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size',
                         default=4,
                         type=int,
-                        help='(OPTIONAL)  Batch size for mini-batch gradient descent.')
+                        help='(OPTIONAL) Batch size for mini-batch gradient descent.')
     # Initial Learning Rate: Initial learning rate. Learning gets set to 1e-5 halfway through training.
     parser.add_argument('--init-lr',
                         default=1e-4,
                         type=float,
-                        help='(OPTIONAL)  Batch size for mini-batch gradient descent.')
+                        help='(OPTIONAL) Batch size for mini-batch gradient descent.')
     # Optional: Number of epochs for training.
     parser.add_argument('--epochs',
                         default=300,
@@ -311,6 +319,11 @@ if __name__ == '__main__':
                         default='true',
                         type=str,
                         help='(OPTIONAL) Whether the logs should be verbose or not')
+    # Optional: The number of epochs to wait for improvement before halting the training.
+    parser.add_argument('--patience',
+                        default=300,
+                        type=int,
+                        help='(OPTIONAL) How many epochs to wait for improvement before stopping')
     _args = parser.parse_args()
 
     print("== System Details ==")
