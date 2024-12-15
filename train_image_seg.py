@@ -321,7 +321,7 @@ if __name__ == '__main__':
                         help='(OPTIONAL) Whether the logs should be verbose or not')
     # Optional: The number of epochs to wait for improvement before halting the training.
     parser.add_argument('--patience',
-                        default=300,
+                        default=30,
                         type=int,
                         help='(OPTIONAL) How many epochs to wait for improvement before stopping')
     _args = parser.parse_args()
