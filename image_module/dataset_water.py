@@ -135,7 +135,7 @@ class WaterDataset_RGB(WaterDataset):
     def __getitem__(self, index):
         if self.mode == 'train_offline' or self.mode == 'val_offline' or self.mode == 'test_offline':
             img = load_img(self.img_list[index], 'RGB')
-            label = load_img(self.label_list[index], 'L')
+            label = load_img(self.label_list[index], 'P')
             return self.apply_transforms(img, label)
         elif self.mode == 'train_online':
             return self.apply_transforms(self.first_frame, self.first_frame_label)
