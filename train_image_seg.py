@@ -94,6 +94,26 @@ def train(args):
             classes=1,
             activation='sigmoid'
         )
+    elif model_name == 'unet':
+        print(f"Loading Unet from SMP with weights from '{encoder_weights}'...")
+        model = smp.Unet(
+            encoder_name=encoder_name,
+            encoder_depth=5,
+            encoder_weights='imagenet',
+            in_channels=3,
+            classes=1,
+            activation='sigmoid'
+        )
+    elif model_name == 'unet++':
+        print(f"Loading UnetPlusPlus from SMP with weights from '{encoder_weights}'...")
+        model = smp.UnetPlusPlus(
+            encoder_name=encoder_name,
+            encoder_depth=5,
+            encoder_weights='imagenet',
+            in_channels=3,
+            classes=1,
+            activation='sigmoid'
+        )
     else:
         print("Unrecognized or unspecified model name, exiting...")
         return
@@ -281,7 +301,7 @@ if __name__ == '__main__':
     parser.add_argument('--model',
                         default="",
                         type=str,
-                        help='Model architecture to use, one of DeepLabV3+ or Linknet')
+                        help='Model architecture to use, one of DeepLabV3+, Linknet, Unet, or Unet++.')
     # Optional: Image input size that the model should be designed to accept. In LinkNet, image will be
     #           subsampled 5 times, and thus must be a factor of 32.
     parser.add_argument('--input-shape',
