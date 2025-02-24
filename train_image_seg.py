@@ -11,6 +11,7 @@ from segmentation_models_pytorch.utils.losses import DiceLoss
 import matplotlib.pyplot as plt
 from torch.utils import data
 from image_module.dataset_water import WaterDataset_RGB
+import time
 
 ROOT_DIR = './'
 
@@ -285,10 +286,14 @@ def train_model(model, init_lr, num_epochs, out_path, train_loader, val_loader, 
     python train_segmodel.py --dataset_path --encoder --model
 """
 if __name__ == '__main__':
+    # Start timer
+    start_time = time.time()
+
     # Hyper parameters
     parser = argparse.ArgumentParser(description='PyTorch WaterNet Model Testing')
     # Required: Path to the .pth file.
     parser.add_argument('--dataset-path',
+                        required=True,
                         type=str,
                         metavar='PATH',
                         help='Path to the dataset. Expects format shown in the header comments.')
@@ -360,4 +365,11 @@ if __name__ == '__main__':
         device = torch.device('cuda')
 
     train(_args)
-    print("Done.")
+
+    # End timer
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    hours = int(elapsed_time // 3600)
+    minutes = int((elapsed_time % 3600) // 60)
+    seconds = int(elapsed_time % 60)
+    print(f"Done. Took {hours:02d}h {minutes:02d}m {seconds:02d}s")
