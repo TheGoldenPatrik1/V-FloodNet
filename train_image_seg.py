@@ -30,6 +30,7 @@ def train(args):
         print(traceback.format_exc())
 
     dataset_path = args.dataset_path
+    datafile_path = args.datafile_path
     input_shape = args.input_shape
     batch_size = args.batch_size
     init_lr = args.init_lr
@@ -47,12 +48,14 @@ def train(args):
     train_dataset = WaterDataset_RGB(
         mode='train_offline',
         dataset_path=dataset_path,
+        datafile_path=datafile_path,
         input_size=(416, 416)
     )
 
     val_dataset = WaterDataset_RGB(
         mode='val_offline',
         dataset_path=dataset_path,
+        datafile_path=datafile_path,
         input_size=(input_shape, input_shape)
     )
 
@@ -291,12 +294,16 @@ if __name__ == '__main__':
 
     # Hyper parameters
     parser = argparse.ArgumentParser(description='PyTorch WaterNet Model Testing')
-    # Required: Path to the .pth file.
+    # Required: Path to the dataset directory.
     parser.add_argument('--dataset-path',
                         required=True,
                         type=str,
                         metavar='PATH',
                         help='Path to the dataset. Expects format shown in the header comments.')
+    # Optional: Path to a JSON file specifying how to split the dataset images into training and validation.
+    parser.add_argument('--datafile-path',
+                        type=str,
+                        help="Path to a JSON file specifying how to split the dataset images.")
     # Required: Encoder name.
     parser.add_argument('--encoder',
                         type=str,
@@ -304,7 +311,7 @@ if __name__ == '__main__':
                         help='Encoder name, as used by segmentation_model.pytorch library')
     # Required: Which model architecture to use.
     parser.add_argument('--model',
-                        default="",
+                        required=True,
                         type=str,
                         help='Model architecture to use, one of DeepLabV3+, Linknet, Unet, or Unet++.')
     # Optional: Image input size that the model should be designed to accept. In LinkNet, image will be
@@ -318,7 +325,7 @@ if __name__ == '__main__':
                         default=4,
                         type=int,
                         help='(OPTIONAL) Batch size for mini-batch gradient descent.')
-    # Initial Learning Rate: Initial learning rate. Learning gets set to 1e-5 halfway through training.
+    # Optional: Initial learning rate. Learning gets set to 1e-5 halfway through training.
     parser.add_argument('--init-lr',
                         default=1e-4,
                         type=float,

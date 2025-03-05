@@ -4,6 +4,7 @@ from glob import glob
 import torchvision.transforms.functional as TF
 from PIL import Image
 from torch.utils import data
+import json
 
 from . import transforms as my_tf
 from myutils import load_image_in_PIL as load_img
@@ -15,7 +16,7 @@ def load_image_in_PIL(path, mode='RGB'):
 
 class WaterDataset(data.Dataset):
 
-    def __init__(self, mode, dataset_path, input_size=None, test_case=None, eval_size=None):
+    def __init__(self, mode, dataset_path, datafile_path=None, input_size=None, test_case=None, eval_size=None):
 
         super(WaterDataset, self).__init__()
 
@@ -29,6 +30,29 @@ class WaterDataset(data.Dataset):
         self.eval_size = eval_size
 
         if mode == 'train_offline' or mode == 'val_offline':
+            if datafile_path != None and os.path.exists(datafile_path):
+                with open(datafile_path) as f:
+                    splits = json.load(f)
+                
+                type = mode.split('_')[0]
+                split = set(splits[type])
+
+                labels = glob(os.path.join(dataset_path, 'mask', '*.png'))
+                labels = [label for label in labels if os.path.splitext(os.path.basename(label))[0] in split]
+                labels.sort(key=lambda x: (len(x), x))
+                self.label_list += labels
+
+                names = {os.path.basename(x)[:-4] for x in labels}
+
+                img_list = glob(os.path.join(dataset_path, 'image', '*.jpg'))
+                img_list = [img for img in img_list if os.path.splitext(os.path.basename(img))[0] in names]
+                img_list.sort(key=lambda x: (len(x), x))
+                self.img_list += img_list
+
+                print('Add', len(img_list), type, 'files.')
+
+                return
+            
             file_path = os.path.join(dataset_path, 'train_imgs.txt')
             if not os.path.exists(file_path):
                 type = mode.split('_')[0]
@@ -47,7 +71,7 @@ class WaterDataset(data.Dataset):
 
                 self.img_list += img_list_valid
 
-                print('Add', type, len(img_list_valid), 'files.')
+                print('Add', len(img_list_valid), type, 'files.')
                 return
             
             with open(file_path) as f:
@@ -72,7 +96,7 @@ class WaterDataset(data.Dataset):
 
                 self.img_list += img_list_valid
 
-                print('Add', sub_folder, len(img_list_valid), 'files.')
+                print('Add', len(img_list_valid), sub_folder, 'files.')
 
         elif mode == 'eval':
             if test_case is None:
@@ -129,8 +153,8 @@ class WaterDataset(data.Dataset):
 
 
 class WaterDataset_RGB(WaterDataset):
-    def __init__(self, mode, dataset_path, input_size=None, test_case=None, eval_size=None):
-        super(WaterDataset_RGB, self).__init__(mode, dataset_path, input_size, test_case, eval_size)
+    def __init__(self, mode, dataset_path, datafile_path=None, input_size=None, test_case=None, eval_size=None):
+        super(WaterDataset_RGB, self).__init__(mode, dataset_path, datafile_path, input_size, test_case, eval_size)
 
     def __getitem__(self, index):
         if self.mode == 'train_offline' or self.mode == 'val_offline' or self.mode == 'test_offline':
